@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'tools/deep_analyze_xapk.py'
+      - 'tools/find_runner_mode.py'
       - '.github/workflows/analyze-xapk.yml'
   workflow_dispatch:
     inputs:
@@ -39,10 +40,11 @@ jobs:
           FILE="$(find input -maxdepth 1 -type f -name '*.xapk' -print -quit)"
           python tools/analyze_xapk.py "$FILE" analysis
           python tools/deep_analyze_xapk.py "$FILE" analysis
-          cat analysis/DEEP_REPORT.md >> "$GITHUB_STEP_SUMMARY"
+          python tools/find_runner_mode.py "$FILE" analysis
+          cat analysis/RUNNER_REPORT.md >> "$GITHUB_STEP_SUMMARY"
       - name: Publicar relatório para download
         uses: actions/upload-artifact@v4
         with:
-          name: Relatorio-XAPK-Completo
+          name: Analise-Modo-Soldados
           path: analysis/
           retention-days: 30
