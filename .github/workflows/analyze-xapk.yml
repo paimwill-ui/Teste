@@ -1,5 +1,10 @@
 name: Analisar XAPK de referência
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/deep_analyze_xapk.py'
+      - '.github/workflows/analyze-xapk.yml'
   workflow_dispatch:
     inputs:
       release_tag:
@@ -23,7 +28,7 @@ jobs:
       - name: Baixar XAPK da Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.release_tag }}
+          TAG: ${{ inputs.release_tag || 'v1.0.0' }}
         run: |
           mkdir -p input
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.xapk' --dir input
@@ -33,10 +38,11 @@ jobs:
         run: |
           FILE="$(find input -maxdepth 1 -type f -name '*.xapk' -print -quit)"
           python tools/analyze_xapk.py "$FILE" analysis
-          cat analysis/REPORT.md >> "$GITHUB_STEP_SUMMARY"
+          python tools/deep_analyze_xapk.py "$FILE" analysis
+          cat analysis/DEEP_REPORT.md >> "$GITHUB_STEP_SUMMARY"
       - name: Publicar relatório para download
         uses: actions/upload-artifact@v4
         with:
-          name: Relatorio-XAPK
+          name: Relatorio-XAPK-Completo
           path: analysis/
           retention-days: 30
