@@ -1,0 +1,42 @@
+name: Analisar XAPK de referência
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Tag da Release com o XAPK'
+        required: true
+        default: 'v1.0.0'
+        type: string
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    steps:
+      - name: Baixar código de análise
+        uses: actions/checkout@v4
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Baixar XAPK da Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          mkdir -p input
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.xapk' --dir input
+          test "$(find input -maxdepth 1 -type f -name '*.xapk' | wc -l)" -eq 1 || { echo 'Esperado exatamente um XAPK na Release'; exit 1; }
+          ls -lh input
+      - name: Inventariar APK e recursos sem executar o jogo
+        run: |
+          FILE="$(find input -maxdepth 1 -type f -name '*.xapk' -print -quit)"
+          python tools/analyze_xapk.py "$FILE" analysis
+          cat analysis/REPORT.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publicar relatório para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: Relatorio-XAPK
+          path: analysis/
+          retention-days: 30
